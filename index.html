@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL 隔离级别探索工作台 · 内存 MVCC</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">⏱</span>
+    <div>
+      <h1>SQL 隔离级别探索工作台</h1>
+      <div class="sub">内存 MVCC 调度 · 不连接真实数据库 · 刷新自动恢复未完成调度</div>
+    </div>
+  </div>
+  <div class="clock" id="clockPanel">
+    <div><span class="clock-k">逻辑时钟</span><b id="clockTick">0</b></div>
+    <div><span class="clock-k">提交序号</span><b id="clockCommit">0</b></div>
+  </div>
+</header>
+
+<div class="presetbar" id="presetBar"></div>
+
+<main class="layout">
+
+  <!-- LEFT: plan editor + transport -->
+  <section class="col col-plan">
+    <div class="panel">
+      <div class="panel-h">
+        <h2>调度编排</h2>
+        <div class="row-actions">
+          <input id="planTitle" class="plan-title" placeholder="调度名称" />
+          <button class="btn ghost" id="btnReset" title="清空全部并重新开始">↺ 重置</button>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn primary" id="btnStep" title="执行下一个待执行步骤">▶ 单步</button>
+        <button class="btn" id="btnRun" title="运行到下一个断点或结束">⏭ 运行到断点</button>
+        <button class="btn ghost" id="btnBack" title="回到该调度的初始状态（重新执行，步骤不重复）">⟲ 重放</button>
+        <label class="auto">
+          <input type="checkbox" id="autoRun" /> 自动播放
+          <input type="range" id="autoSpeed" min="200" max="2500" step="100" value="900" />
+        </label>
+      </div>
+      <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 0</div>
+
+      <div class="step-list" id="stepList"></div>
+
+      <div class="add-step">
+        <h3>追加步骤</h3>
+        <div class="form-grid" id="addForm">
+          <label>事务
+            <input id="fTx" value="T1" list="txList" placeholder="如 T1" />
+            <datalist id="txList"></datalist>
+          </label>
+          <label>动作
+            <select id="fAction"></select>
+          </label>
+          <label class="f-iso">隔离级别
+            <select id="fIso">
+              <option value="RU">RU 读未提交</option>
+              <option value="RC" selected>RC 读已提交</option>
+              <option value="SI">SI 快照隔离</option>
+              <option value="SE">SE 可序列化</option>
+            </select>
+          </label>
+          <label class="f-ro"><input type="checkbox" id="fReadOnly" /> 只读</label>
+          <label class="f-key">键 <input id="fKey" placeholder="如 x" /></label>
+          <label class="f-val">值 <input id="fVal" placeholder="如 42" /></label>
+          <label class="f-op">谓词
+            <select id="fOp">
+              <option>&gt;</option><option>&gt;=</option>
+              <option>&lt;</option><option>&lt;=</option>
+              <option>=</option><option>&lt;&gt;</option>
+            </select>
+          </label>
+          <label class="f-pval">比较值 <input id="fPVal" placeholder="15" /></label>
+          <label class="f-name">保存点名 <input id="fName" placeholder="sp1" /></label>
+          <label class="f-bp"><input type="checkbox" id="fBreakpoint" /> 断点</label>
+          <button class="btn primary f-add" id="btnAddStep">＋ 添加到末尾</button>
+        </div>
+        <div class="seed-edit">
+          初始数据（JSON，仅重置后生效）：
+          <input id="seedInput" value='{"x": 10}' />
+          <button class="btn ghost" id="btnApplySeed">应用并重置</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CENTER: version chains + txns + edges -->
+  <section class="col col-state">
+    <div class="panel">
+      <div class="panel-h"><h2>键 / 版本链（MVCC）</h2>
+        <div class="legend">
+          <span><i class="dot committed"></i>已提交</span>
+          <span><i class="dot pending"></i>未提交</span>
+          <span><i class="dot aborted"></i>已作废</span>
+          <span><i class="dot deleted"></i>删除标记</span>
+        </div>
+      </div>
+      <div class="version-chains" id="chainView"><div class="empty">尚无数据</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h2>事务与锁</h2></div>
+      <div class="txn-grid" id="txnView"><div class="empty">尚无事务</div></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h">
+        <h2>读写依赖图（冲突边）</h2>
+        <div class="legend">
+          <span><i class="edge-rw"></i>rw 读写依赖（反序）</span>
+          <span><i class="edge-ww"></i>ww 写写</span>
+          <span><i class="edge-wr"></i>wr 写读</span>
+        </div>
+      </div>
+      <svg id="edgeSvg" class="edge-svg" viewBox="0 0 600 220" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+  </section>
+
+  <!-- RIGHT: event log + anomalies -->
+  <section class="col col-log">
+    <div class="panel anomalies-panel">
+      <div class="panel-h"><h2>异常与等待</h2><span class="count" id="anomalyCount"></span></div>
+      <div id="anomalyList" class="anomaly-list"><div class="empty">暂无异常 — 试着并发交错多个事务</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h2>逐步执行日志</h2>
+        <label class="filter"><input type="checkbox" id="hideInfo" /> 隐藏常规</label>
+      </div>
+      <div id="eventLog" class="event-log"></div>
+    </div>
+  </section>
+
+</main>
+
+<div class="inspector" id="inspector" hidden>
+  <div class="inspector-h">
+    <b id="inspectorTitle">详情</b>
+    <button class="icon-btn" id="inspectorClose">✕</button>
+  </div>
+  <pre id="inspectorBody"></pre>
+</div>
+
+<footer class="foot">
+  模型：每键版本链 · beginSeq 快照 · 排他键锁 · 先提交者获胜 · SSI 依赖环检测 · localStorage 持久化
+</footer>
+
+<script src="js/engine.js"></script>
+<script src="js/scheduler.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
