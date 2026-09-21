@@ -1,0 +1,79 @@
+:root {
+  --bg: #0f1420; --panel: #171e2e; --border: #2a3550; --fg: #d7e0f0;
+  --dim: #7c8aa5; --accent: #5aa2ff; --rw: #ff9f43; --bad: #ff5c6c;
+  --ok: #3fd08c; --wait: #ffd166;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.5 "SF Mono", Menlo, Consolas, monospace; }
+header { padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; }
+h1 { font-size: 16px; margin: 0; }
+h1 .sub { color: var(--dim); font-weight: normal; font-size: 12px; }
+#clockbar { color: var(--dim); }
+#clockbar b { color: var(--accent); }
+main { display: grid; grid-template-columns: 300px 1fr 380px; gap: 10px; padding: 10px; height: calc(100vh - 50px); }
+aside, #center { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.panel.grow { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); margin: 0 0 8px; }
+.scroll { overflow-y: auto; min-height: 0; }
+.grow .scroll { flex: 1; }
+input, select, textarea, button { background: #0d1220; color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font: inherit; }
+textarea { width: 100%; height: 220px; resize: vertical; }
+#left input, #left select, #left button { width: 100%; margin-bottom: 6px; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.danger { border-color: var(--bad); color: var(--bad); }
+#controls { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { color: var(--bad); min-height: 1em; }
+
+.sched-item { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; cursor: pointer; }
+.sched-item.active { border-color: var(--accent); }
+.sched-item .meta { color: var(--dim); font-size: 11px; }
+
+.op { padding: 3px 8px; border-left: 3px solid var(--border); margin: 2px 0; white-space: pre-wrap; }
+.op.pending { color: var(--dim); }
+.op.done { border-left-color: var(--ok); }
+.op.blocked { border-left-color: var(--wait); color: var(--wait); }
+.op.next { background: #1d2942; }
+
+.ev { padding: 3px 8px; margin: 2px 0; border-left: 3px solid var(--border); }
+.ev .clk { color: var(--dim); margin-right: 6px; }
+.ev.anomaly, .ev.error { border-left-color: var(--bad); }
+.ev.lock_wait { border-left-color: var(--wait); }
+.ev.commit { border-left-color: var(--ok); }
+.ev.hl { background: #3a2a1a; outline: 1px solid var(--rw); }
+
+.badge { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: 11px; margin-left: 6px; }
+.badge.active { background: #1d2942; color: var(--accent); }
+.badge.blocked { background: #3a331a; color: var(--wait); }
+.badge.committed { background: #14352a; color: var(--ok); }
+.badge.aborted { background: #3a1d24; color: var(--bad); }
+.badge.ro { background: #222; color: var(--dim); }
+.txn { margin-bottom: 4px; }
+.txn .snap { color: var(--dim); font-size: 11px; }
+
+.rowkey { margin-bottom: 8px; }
+.rowkey .k { color: var(--accent); }
+.ver { padding: 2px 8px; margin: 1px 0 1px 12px; border-left: 2px solid var(--border); color: var(--dim); }
+.ver.committed { color: var(--fg); border-left-color: var(--ok); }
+.ver.inflight { border-left-color: var(--wait); }
+.ver.aborted { text-decoration: line-through; opacity: .6; }
+.ver.visible-now { background: #14352a; }
+.ver .tomb { color: var(--bad); }
+
+.edge { padding: 2px 6px; margin: 2px 0; }
+.edge.rw { color: var(--rw); }
+.edge.ww { color: var(--bad); }
+.edge.wr { color: var(--ok); }
+.edge.hl { background: #3a2a1a; outline: 1px solid var(--rw); }
+
+.anom { padding: 6px 8px; margin: 4px 0; border: 1px solid var(--bad); border-radius: 6px; cursor: pointer; }
+.anom:hover { background: #2a1a20; }
+.anom.sel { background: #3a2a1a; border-color: var(--rw); }
+.anom .kind { color: var(--bad); font-weight: bold; }
+.anom .detail { color: var(--dim); font-size: 11px; }
+.lock { margin-bottom: 4px; }
+.lock .q { color: var(--wait); margin-left: 12px; }
+.muted { color: var(--dim); }
+.rw { color: var(--rw); }

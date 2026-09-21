@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>MVCC 隔离级别工作台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>SQL 隔离级别探索工作台 <span class="sub">内存 MVCC · 不连接真实数据库</span></h1>
+  <div id="clockbar"></div>
+</header>
+<main>
+  <aside id="left">
+    <section class="panel">
+      <h2>调度</h2>
+      <div id="schedule-list"></div>
+    </section>
+    <section class="panel">
+      <h2>新建调度</h2>
+      <input id="sched-name" placeholder="名称">
+      <select id="sched-isolation">
+        <option value="read_committed">read committed</option>
+        <option value="snapshot_isolation" selected>snapshot isolation</option>
+        <option value="serializable">serializable</option>
+      </select>
+      <select id="template"><option value="">— 载入模板 —</option></select>
+      <textarea id="ops-editor" spellcheck="false" placeholder='[{"type":"begin","txn":"T1"}, ...]'></textarea>
+      <button id="create-btn">创建调度</button>
+      <div id="create-err" class="err"></div>
+    </section>
+  </aside>
+
+  <section id="center">
+    <div class="panel" id="controls">
+      <button id="step-btn">单步 ▶</button>
+      <button id="auto-btn">自动 ▶▶</button>
+      <button id="pause-btn" disabled>暂停 ⏸</button>
+      <button id="run-btn">运行到结束</button>
+      <button id="reset-btn">重置(归档历史)</button>
+      <button id="delete-btn" class="danger">删除</button>
+    </div>
+    <div class="panel">
+      <h2>操作队列</h2>
+      <div id="ops-list" class="scroll"></div>
+    </div>
+    <div class="panel grow">
+      <h2>事件时间线</h2>
+      <div id="timeline" class="scroll"></div>
+    </div>
+  </section>
+
+  <aside id="right">
+    <section class="panel">
+      <h2>事务</h2>
+      <div id="txns"></div>
+    </section>
+    <section class="panel">
+      <h2>数据与版本 <select id="viewpoint"><option value="">（上帝视角）</option></select></h2>
+      <div id="rows" class="scroll"></div>
+    </section>
+    <section class="panel">
+      <h2>锁与等待</h2>
+      <div id="locks"></div>
+    </section>
+    <section class="panel">
+      <h2>冲突边 (wr / ww / <b class="rw">rw</b>)</h2>
+      <div id="edges" class="scroll"></div>
+    </section>
+    <section class="panel">
+      <h2>异常</h2>
+      <div id="anomalies" class="scroll"></div>
+    </section>
+  </aside>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
